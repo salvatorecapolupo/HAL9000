@@ -13,19 +13,38 @@ html, body {
   color: #ddd;
 }
 
+/* centro tutto */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* finestra HAL */
 #container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 12px;
+
+  width: 100%;
+  max-width: 520px;          /* larghezza controllata */
+  height: 80vh;              /* aria sopra/sotto */
+
+  padding: 20px 24px;        /* più margine laterale */
+  box-sizing: border-box;
+
+  border: 1px solid #222;    /* quasi invisibile */
 }
 
+/* area messaggi */
 #display {
   flex: 1;
   overflow-y: auto;
   font-size: 14px;
+  line-height: 1.4;
+  padding-bottom: 10px;
 }
 
+/* righe */
 .line {
   margin: 6px 0;
 }
@@ -40,15 +59,26 @@ html, body {
   color: #ff3333;
 }
 
+/* input minimale */
 #input {
   background: #000;
   border: 1px solid #333;
   color: #ddd;
-  padding: 8px;
+  padding: 10px;
   font-size: 14px;
   outline: none;
 }
+
+/* mobile */
+@media (max-width: 600px) {
+  #container {
+    height: 90vh;
+    padding: 16px;
+    max-width: 100%;
+  }
+}
 </style>
+
 </head>
 
 <body>
