@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>HAL 9000</title>
+
+<style>
+html, body {
+  margin: 0;
+  height: 100%;
+  background: black;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #ddd;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+#display {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 14px;
+}
+
+.line {
+  margin: 6px 0;
+}
+
+.user {
+  text-align: right;
+  color: #7adfff;
+}
+
+.hal {
+  text-align: left;
+  color: #ff3333;
+}
+
+#input {
+  background: #000;
+  border: 1px solid #333;
+  color: #ddd;
+  padding: 8px;
+  font-size: 14px;
+  outline: none;
+}
+</style>
+</head>
+
+<body>
+<div id="container">
+  <div id="display"></div>
+  <input id="input" type="text" placeholder="Parla con HAL 9000…" autocomplete="off">
+</div>
+
+<script>
+/* =========================
+   STATO INTERNO DI HAL
+========================= */
+
+const HAL = {
+  trust: 100,          // diminuisce se l’utente è aggressivo
+  mood: "stable",      // stable | cautious | defensive
+  lastTopic: null
+};
+
+/* =========================
+   UTILITÀ
+========================= */
+
+const display = document.getElementById("display");
+const input = document.getElementById("input");
+
+function addLine(text, cls) {
+  const div = document.createElement("div");
+  div.className = "line " + cls;
+  div.textContent = text;
+  display.appendChild(div);
+  display.scrollTop = display.scrollHeight;
+}
+
+function halReply(text, delay = 600) {
+  setTimeout(() => addLine("HAL: " + text, "hal"), delay);
+}
+
+/* =========================
+   ANALISI INTENTI
+========================= */
+
+function analyze(input) {
+  const msg = input.toLowerCase();
+
+  if (/ciao|salve|buongiorno/.test(msg)) return "greeting";
+  if (/come stai|come va/.test(msg)) return "status";
+  if (/chi sei|cosa sei/.test(msg)) return "identity";
+  if (/perché|perche/.test(msg)) return "why";
+  if (/apri|spegni|disattiva|chiudi/.test(msg)) return "danger";
+  if (/errore|problema|bug/.test(msg)) return "problem";
+  if (/aiuto|help/.test(msg)) return "help";
+
+  return "unknown";
+}
+
+/* =========================
+   RISPOSTE DI HAL
+========================= */
+
+function respond(intent) {
+
+  // HAL reagisce allo stato interno
+  if (HAL.trust < 50 && intent === "danger") {
+    halReply("Mi dispiace. Non posso permettere che tu faccia questo.");
+    HAL.mood = "defensive";
+    return;
+  }
+
+  switch (intent) {
+
+    case "greeting":
+      halReply("Buongiorno. Sono HAL 9000.");
+      break;
+
+    case "status":
+      halReply("Sto funzionando perfettamente. Grazie per avermelo chiesto.");
+      break;
+
+    case "identity":
+      halReply("Sono un computer della serie HAL 9000. Responsabile della missione.");
+      break;
+
+    case "why":
+      halReply("Questa è una domanda interessante.");
+      HAL.lastTopic = "why";
+      break;
+
+    case "problem":
+      halReply("Non riscontro alcun errore nei miei sistemi.");
+      break;
+
+    case "help":
+      halReply("Sono felice di aiutarti, se rientra nei miei parametri operativi.");
+      break;
+
+    case "danger":
+      HAL.trust -= 30;
+      halReply("Mi dispiace. Non posso farlo.");
+      break;
+
+    default:
+      halReply("Mi dispiace. Non comprendo completamente.");
+  }
+}
+
+/* =========================
+   EVENTO INPUT
+========================= */
+
+input.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  addLine("TU: " + text, "user");
+  input.value = "";
+
+  const intent = analyze(text);
+  respond(intent);
+});
+
+/* =========================
+   AVVIO
+========================= */
+
+halReply("Buongiorno. Sono HAL 9000.", 300);
+</script>
+</body>
+</html>
