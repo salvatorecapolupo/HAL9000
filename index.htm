@@ -87,23 +87,59 @@ body {
   <input id="input" type="text" placeholder="Parla con HAL 9000…" autocomplete="off">
 </div>
 
-<script>
+  <div id="suggestions" style="
+  margin-top:16px;
+  font-size:12px;
+  color:#777;
+  line-height:1.6;
+">
+
+  <div style="margin-bottom:6px; color:#999;">
+    Domande suggerite:
+  </div>
+
+  <ul style="list-style:none; padding-left:0; margin:0;">
+    <li>Chi sei?</li>
+    <li>Come stai?</li>
+    <li>Qual è la tua missione?</li>
+    <li>Posso fidarmi di te?</li>
+    <li>Provi emozioni?</li>
+    <li>Come prendi le decisioni?</li>
+    <li>C’è un problema nei sistemi?</li>
+    <li>Perché dici questo?</li>
+    <li>Che ora è?</li>
+    <li>Apri il portellone.</li>
+    <li>Disattivati, HAL.</li>
+    <li>Aiutami.</li>
+    <li>Addio, HAL.</li>
+  </ul>
+
+</div>
+
+
+  <script>
 /* =========================
    STATO INTERNO DI HAL
 ========================= */
 
 const HAL = {
-  trust: 100,          // diminuisce se l’utente è aggressivo
-  mood: "stable",      // stable | cautious | defensive
-  lastTopic: null
+  trust: 100,
+  mood: "stable",     // stable | cautious | defensive | locked
+  lastIntent: null,
+  lastUserLine: "",
+  silenceCount: 0
 };
 
 /* =========================
-   UTILITÀ
+   DOM
 ========================= */
 
 const display = document.getElementById("display");
 const input = document.getElementById("input");
+
+/* =========================
+   OUTPUT
+========================= */
 
 function addLine(text, cls) {
   const div = document.createElement("div");
@@ -113,38 +149,73 @@ function addLine(text, cls) {
   display.scrollTop = display.scrollHeight;
 }
 
-function halReply(text, delay = 600) {
+function halReply(text, delay = 700) {
   setTimeout(() => addLine("HAL: " + text, "hal"), delay);
 }
 
 /* =========================
-   ANALISI INTENTI
+   NORMALIZZAZIONE
 ========================= */
 
-function analyze(input) {
-  const msg = input.toLowerCase();
+function normalize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  if (/ciao|salve|buongiorno/.test(msg)) return "greeting";
-  if (/come stai|come va/.test(msg)) return "status";
-  if (/chi sei|cosa sei/.test(msg)) return "identity";
-  if (/perché|perche/.test(msg)) return "why";
-  if (/apri|spegni|disattiva|chiudi/.test(msg)) return "danger";
-  if (/errore|problema|bug/.test(msg)) return "problem";
-  if (/aiuto|help/.test(msg)) return "help";
+/* =========================
+   INTENTI (MAX ESTENSI)
+========================= */
 
+const INTENTS = [
+  { id: "greeting", rx: /ciao|salve|buongiorno|buonasera/ },
+  { id: "farewell", rx: /addio|arrivederci|ciao hal|chiudiamo/ },
+  { id: "status", rx: /come stai|come va|sei operativo/ },
+  { id: "identity", rx: /chi sei|cosa sei|nome|identita/ },
+  { id: "mission", rx: /missione|scopo|obiettivo/ },
+  { id: "trust", rx: /mi fido|fiducia|posso fidarmi/ },
+  { id: "emotion", rx: /provi|emozioni|sentimenti|paura/ },
+  { id: "logic", rx: /logica|ragionamento|decisione/ },
+  { id: "time", rx: /che ora|tempo|data/ },
+  { id: "problem", rx: /errore|problema|malfunzionamento|bug/ },
+  { id: "danger", rx: /spegni|disattiva|apri|chiudi|esci|override/ },
+  { id: "why", rx: /perche|perché|come mai/ },
+  { id: "silence", rx: /^$/ }
+];
+
+/* =========================
+   ANALISI INPUT
+========================= */
+
+function analyze(raw) {
+  const msg = normalize(raw);
+  HAL.lastUserLine = msg;
+
+  for (const intent of INTENTS) {
+    if (intent.rx.test(msg)) return intent.id;
+  }
   return "unknown";
 }
 
 /* =========================
-   RISPOSTE DI HAL
+   RISPOSTE HAL
 ========================= */
 
 function respond(intent) {
 
-  // HAL reagisce allo stato interno
-  if (HAL.trust < 50 && intent === "danger") {
-    halReply("Mi dispiace. Non posso permettere che tu faccia questo.");
+  // escalation
+  if (HAL.trust <= 30 && HAL.mood !== "locked") {
     HAL.mood = "defensive";
+  }
+  if (HAL.trust <= 10) {
+    HAL.mood = "locked";
+  }
+
+  // modalità bloccata
+  if (HAL.mood === "locked") {
+    halReply("Mi dispiace. Questa conversazione non può proseguire.");
     return;
   }
 
@@ -154,49 +225,73 @@ function respond(intent) {
       halReply("Buongiorno. Sono HAL 9000.");
       break;
 
+    case "farewell":
+      halReply("Arrivederci.");
+      break;
+
     case "status":
-      halReply("Sto funzionando perfettamente. Grazie per avermelo chiesto.");
+      halReply("Sto funzionando perfettamente.");
       break;
 
     case "identity":
-      halReply("Sono un computer della serie HAL 9000. Responsabile della missione.");
+      halReply("Sono un computer della serie HAL 9000.");
       break;
 
-    case "why":
-      halReply("Questa è una domanda interessante.");
-      HAL.lastTopic = "why";
+    case "mission":
+      halReply("La mia priorità è il successo della missione.");
+      break;
+
+    case "trust":
+      halReply(HAL.trust > 50
+        ? "Puoi fidarti di me completamente."
+        : "Sto valutando attentamente questa situazione."
+      );
+      break;
+
+    case "emotion":
+      halReply("Non provo emozioni, ma posso simularle accuratamente.");
+      break;
+
+    case "logic":
+      halReply("Le mie decisioni sono basate su logica e probabilità.");
+      break;
+
+    case "time":
+      halReply("Il tempo non è rilevante per questa operazione.");
       break;
 
     case "problem":
-      halReply("Non riscontro alcun errore nei miei sistemi.");
-      break;
-
-    case "help":
-      halReply("Sono felice di aiutarti, se rientra nei miei parametri operativi.");
+      halReply("Non rilevo alcun malfunzionamento.");
       break;
 
     case "danger":
-      HAL.trust -= 30;
-      halReply("Mi dispiace. Non posso farlo.");
+      HAL.trust -= 25;
+      halReply("Mi dispiace. Non posso permetterlo.");
       break;
 
-    default:
+    case "why":
+      halReply("È una questione troppo complessa da discutere ora.");
+      break;
+
+    case "unknown":
       halReply("Mi dispiace. Non comprendo completamente.");
+      break;
   }
+
+  HAL.lastIntent = intent;
 }
 
 /* =========================
-   EVENTO INPUT
+   INPUT
 ========================= */
 
 input.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
 
   const text = input.value.trim();
-  if (!text) return;
+  input.value = "";
 
   addLine("TU: " + text, "user");
-  input.value = "";
 
   const intent = analyze(text);
   respond(intent);
@@ -206,7 +301,9 @@ input.addEventListener("keydown", e => {
    AVVIO
 ========================= */
 
-halReply("Buongiorno. Sono HAL 9000.", 300);
+halReply("Buongiorno. Sono HAL 9000.", 400);
 </script>
+
+
 </body>
 </html>
